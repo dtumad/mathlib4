@@ -213,6 +213,16 @@ variable {s t u : Finset α} {f : α → β} {n : ℕ}
 theorem length_toList (s : Finset α) : s.toList.length = #s := by
   rw [toList, ← Multiset.coe_card, Multiset.coe_toList, card_def]
 
+theorem filter_toList (s : Finset α) (p : α → Prop) [DecidablePred p] :
+    (s.toList.filter p).Perm (s.filter p).toList := by
+  rw [← Multiset.coe_eq_coe, ← Multiset.filter_coe, Finset.coe_toList, ← Finset.filter_val,
+    Finset.coe_toList]
+
+@[simp]
+theorem countP_toList_eq_card_filter (s : Finset α) (p : α → Prop) [DecidablePred p] :
+    s.toList.countP p = #(s.filter p) := by
+  rw [List.countP_eq_length_filter, (filter_toList s p).length_eq, length_toList]
+
 theorem card_image_le [DecidableEq β] : #(s.image f) ≤ #s := by
   simpa only [card_map] using (s.1.map f).toFinset_card_le
 

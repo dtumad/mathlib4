@@ -194,6 +194,13 @@ protected theorem perm_toList {f₁ f₂ : Finset α} : f₁.toList.Perm f₂.to
   mp h := Finset.ext fun x => by simp [← Finset.mem_toList, h.mem_iff]
   mpr h := .of_eq <| congrArg Finset.toList h
 
+@[simp]
+lemma count_toList [DecidableEq α] (s : Finset α) (x : α) :
+    s.toList.count x = if x ∈ s then 1 else 0 := by
+  split_ifs with hx
+  · exact List.count_eq_one_of_mem s.nodup_toList (by simpa using hx)
+  · exact List.count_eq_zero_of_not_mem (by simpa using hx)
+
 end ToList
 
 end Finset

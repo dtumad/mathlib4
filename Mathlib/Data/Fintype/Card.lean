@@ -522,4 +522,9 @@ theorem Fin.cast_eq_cast' {n m : ℕ} (h : Fin n = Fin m) :
 theorem card_finset_fin_le {n : ℕ} (s : Finset (Fin n)) : #s ≤ n := by
   simpa only [Fintype.card_fin] using s.card_le_univ
 
+lemma card_finset_fin_eq_countP_mem {n : ℕ} (s : Finset (Fin n)) : #s = Fin.countP (· ∈ s) := by
+  simp only [Fin.countP_eq_countP_map_finRange, List.countP_eq_length_filter,
+    ← List.toFinset_card_of_nodup ((List.nodup_finRange n).filter _), List.toFinset_filter,
+    decide_eq_true_eq, List.toFinset_finRange, subset_univ, filter_mem_eq_of_subset]
+
 end Fin
