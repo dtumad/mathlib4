@@ -83,6 +83,19 @@ at an index `i : P.B x.fst`. -/
 
 @[simp] theorem Obj.eta (x : P α) : .mk x.fst x.snd = x := rfl
 
+@[ext]
+theorem Obj.ext {x y : P α} (h : x.fst = y.fst) (h' : x.snd ≍ y.snd) : x = y := by
+  cases x
+  cases y
+  cases h
+  cases h'
+  rfl
+
+@[simp]
+theorem Obj.mk_inj {a b : P.A} {f : P.B a → α} {g : P.B b → α} :
+    Obj.mk a f = Obj.mk b g ↔ a = b ∧ f ≍ g :=
+  Obj.ext_iff
+
 end Obj
 
 /-- Applying `P` to a morphism of `Type` -/
