@@ -197,6 +197,24 @@ def comp.get (P₂ : PFunctor.{uA₂, uB₂}) (P₁ : PFunctor.{uA₁, uB₁}) {
     P₂ (P₁ α) :=
   .mk x.fst.1 fun a₂ => .mk (x.fst.2 a₂) fun a₁ => x.snd ⟨a₂, a₁⟩
 
+section comp
+
+variable {P₂ : PFunctor.{uA₂, uB₂}} {P₁ : PFunctor.{uA₁, uB₁}} {α β : Type v}
+
+@[simp]
+theorem comp.get_mk (x : P₂ (P₁ α)) : comp.get P₂ P₁ (comp.mk P₂ P₁ x) = x :=
+  rfl
+
+@[simp]
+theorem comp.mk_get (x : comp P₂ P₁ α) : comp.mk P₂ P₁ (comp.get P₂ P₁ x) = x :=
+  rfl
+
+theorem comp.get_map (f : α → β) (x : comp P₂ P₁ α) :
+    comp.get P₂ P₁ ((comp P₂ P₁).map f x) = P₂.map (P₁.map f) (comp.get P₂ P₁ x) :=
+  rfl
+
+end comp
+
 end PFunctor
 
 /-
