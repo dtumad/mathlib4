@@ -94,6 +94,12 @@ instance Sigma.isEmpty_left {α} [IsEmpty α] {E : α → Type v} : IsEmpty (Sig
 instance Sigma.isEmpty_fibers {α} {E : α → Type v} [∀ a, IsEmpty (E a)] : IsEmpty (Sigma E) :=
   ⟨fun x ↦ IsEmpty.false x.2⟩
 
+instance PSigma.isEmpty_left [IsEmpty α] {E : α → Sort v} : IsEmpty (PSigma E) :=
+  Function.isEmpty PSigma.fst
+
+instance PSigma.isEmpty_fibers {E : α → Sort v} [∀ a, IsEmpty (E a)] : IsEmpty (PSigma E) :=
+  ⟨fun x ↦ IsEmpty.false x.2⟩
+
 example [h : Nonempty α] [IsEmpty β] : IsEmpty (α → β) := by infer_instance
 
 /-- Eliminate out of a type that `IsEmpty` (without using projection notation). -/
