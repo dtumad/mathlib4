@@ -79,15 +79,33 @@ variable [MeasurableSpace α]
 instance : MeasurableSpace (Additive α) := ‹MeasurableSpace α›.map Additive.ofMul
 instance : MeasurableSpace (Multiplicative α) := ‹MeasurableSpace α›.map Multiplicative.ofAdd
 
+@[fun_prop]
 lemma measurable_ofMul : Measurable (Additive.ofMul : α → Additive α) := fun _ ↦ id
+@[fun_prop]
 lemma measurable_toMul : Measurable (Additive.toMul : Additive α → α) := fun _ ↦ id
+@[fun_prop]
 lemma measurable_ofAdd : Measurable (Multiplicative.ofAdd : α → Multiplicative α) := fun _ ↦ id
+@[fun_prop]
 lemma measurable_toAdd : Measurable (Multiplicative.toAdd : Multiplicative α → α) := fun _ ↦ id
 
 @[simp] lemma measurableSet_preimage_toMul {s : Set α} :
     MeasurableSet (Additive.toMul ⁻¹' s) ↔ MeasurableSet s := Iff.rfl
 @[simp] lemma measurableSet_preimage_toAdd {s : Set α} :
     MeasurableSet (Multiplicative.toAdd ⁻¹' s) ↔ MeasurableSet s := Iff.rfl
+
+instance Additive.instMeasurableSingletonClass [MeasurableSingletonClass α] :
+    MeasurableSingletonClass (Additive α) :=
+  ⟨fun a ↦ measurableSet_singleton a.toMul⟩
+instance Multiplicative.instMeasurableSingletonClass [MeasurableSingletonClass α] :
+    MeasurableSingletonClass (Multiplicative α) :=
+  ⟨fun a ↦ measurableSet_singleton a.toAdd⟩
+
+instance Additive.instDiscreteMeasurableSpace [DiscreteMeasurableSpace α] :
+    DiscreteMeasurableSpace (Additive α) :=
+  ⟨fun _ ↦ .of_discrete (α := α)⟩
+instance Multiplicative.instDiscreteMeasurableSpace [DiscreteMeasurableSpace α] :
+    DiscreteMeasurableSpace (Multiplicative α) :=
+  ⟨fun _ ↦ .of_discrete (α := α)⟩
 
 end TypeTags
 
@@ -889,6 +907,38 @@ end Sum
 instance Sigma.instMeasurableSpace {α} {β : α → Type*} [m : ∀ a, MeasurableSpace (β a)] :
     MeasurableSpace (Sigma β) :=
   ⨅ a, (m a).map (Sigma.mk a)
+
+section Sigma
+
+variable {β : α → Type*} [∀ a, MeasurableSpace (β a)]
+
+theorem measurableSet_sigma_iff {s : Set (Sigma β)} :
+    MeasurableSet s ↔ ∀ a, MeasurableSet (Sigma.mk a ⁻¹' s) :=
+  MeasurableSpace.measurableSet_iInf
+
+@[fun_prop]
+theorem measurable_sigmaMk (a : α) : Measurable (Sigma.mk (β := β) a) :=
+  Measurable.of_le_map (iInf_le _ a)
+
+@[simp] theorem measurableSet_sigmaMk_image {a : α} {s : Set (β a)} :
+    MeasurableSet (Sigma.mk a '' s) ↔ MeasurableSet s := by
+  refine ⟨fun h ↦ by simpa [sigma_mk_preimage_image_eq_self] using measurable_sigmaMk a h,
+    fun hs ↦ measurableSet_sigma_iff.2 fun b ↦ ?_⟩
+  obtain rfl | hba := eq_or_ne b a
+  · simpa [sigma_mk_preimage_image_eq_self]
+  · simp [Set.preimage_image_sigmaMk_of_ne hba]
+
+alias ⟨_, MeasurableSet.sigmaMk_image⟩ := measurableSet_sigmaMk_image
+
+instance Sigma.instMeasurableSingletonClass [∀ a, MeasurableSingletonClass (β a)] :
+    MeasurableSingletonClass (Sigma β) where
+  measurableSet_singleton x := by simpa using (measurableSet_singleton x.2).sigmaMk_image
+
+instance Sigma.instDiscreteMeasurableSpace [∀ a, DiscreteMeasurableSpace (β a)] :
+    DiscreteMeasurableSpace (Sigma β) where
+  forall_measurableSet _ := measurableSet_sigma_iff.2 fun _ ↦ .of_discrete
+
+end Sigma
 
 section prop
 variable [MeasurableSpace α] {p q : α → Prop}
