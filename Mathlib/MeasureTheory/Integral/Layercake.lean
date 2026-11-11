@@ -47,6 +47,8 @@ Variants of the formulas with measures of sets of the form `{ω | f(ω) > t}` in
   A Bochner integral version of the most common special case of the layer cake formulas, stating
   that for an integrable and a.e.-nonnegative function f we have
   $∫ f(ω) \,∂μ(ω) = ∫ μ \{ω \mid f(ω) > t\} \,dt$.
+* `MeasureTheory.lintegral_natCast_eq_tsum_meas_lt`: The discrete version for a natural-valued
+  function f, $∫ f(ω) \,∂μ(ω) = ∑_{i ∈ ℕ} μ \{ω \mid f(ω) > i\}$.
 
 ## See also
 
@@ -575,5 +577,24 @@ lemma Integrable.integral_eq_integral_Ioc_meas_le {f : α → ℝ} {M : ℝ}
   exact Or.inl <| measure_mono_null (fun a ha ↦ lt_of_lt_of_le htM ha) obs
 
 end LayercakeIntegral
+
+section LayercakeNat
+
+variable {α : Type*} [MeasurableSpace α]
+
+/-- The tail sum formula, a discrete version of the layer cake formula: the Lebesgue integral of a
+natural-valued function `f` is the sum over `i : ℕ` of the measures `μ {ω | i < f(ω)}`. -/
+theorem lintegral_natCast_eq_tsum_meas_lt (μ : Measure α) {f : α → ℕ} (hf : AEMeasurable f μ) :
+    ∫⁻ ω, (f ω : ℝ≥0∞) ∂μ = ∑' i : ℕ, μ {a : α | i < f a} := by
+  have hs (i : ℕ) : NullMeasurableSet {a | i < f a} μ := hf.nullMeasurable measurableSet_Ioi
+  calc ∫⁻ ω, (f ω : ℝ≥0∞) ∂μ = ∫⁻ ω, ∑' i : ℕ, {a | i < f a}.indicator 1 ω ∂μ := by
+        congr with ω
+        rw [tsum_eq_sum (s := Finset.range (f ω)) (by simp_all)]
+        simp [indicator_apply, Finset.filter_true_of_mem]
+    _ = ∑' i : ℕ, μ {a : α | i < f a} := by
+        rw [lintegral_tsum fun i ↦ measurable_one.aemeasurable.indicator₀ (hs i)]
+        simp [lintegral_indicator_one₀ (hs _)]
+
+end LayercakeNat
 
 end MeasureTheory
