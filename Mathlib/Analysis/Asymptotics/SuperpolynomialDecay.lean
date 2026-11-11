@@ -7,6 +7,7 @@ module
 
 public import Mathlib.Algebra.Polynomial.Eval.Defs
 public import Mathlib.Analysis.Asymptotics.Lemmas
+public import Mathlib.Analysis.Real.Sqrt
 
 /-!
 # Super-Polynomial Function Decay
@@ -319,5 +320,14 @@ theorem superpolynomialDecay_iff_isLittleO (hk : Tendsto k l atTop) :
   simp [← zpow_one_add₀ hkx]
 
 end NormedLinearOrderedField
+
+/-- Taking square roots preserves superpolynomial decay. -/
+theorem SuperpolynomialDecay.sqrt {k f : α → ℝ} (hf : SuperpolynomialDecay l k f) :
+    SuperpolynomialDecay l k fun a ↦ √(f a) := by
+  refine (superpolynomialDecay_iff_abs_tendsto_zero l k _).2 fun n ↦ ?_
+  have h (a : α) : √(k a ^ (2 * n) * f a) = |k a ^ n * √(f a)| := by
+    rw [pow_mul', Real.sqrt_mul (sq_nonneg _), Real.sqrt_sq_eq_abs, abs_mul,
+      abs_of_nonneg (Real.sqrt_nonneg _)]
+  simpa [Function.comp_def, h] using (Real.continuous_sqrt.tendsto 0).comp (hf (2 * n))
 
 end Asymptotics
