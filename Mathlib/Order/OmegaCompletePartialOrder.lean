@@ -28,6 +28,7 @@ supremum helps define the meaning of recursive procedures.
 
 * class `OmegaCompletePartialOrder`
 * `ite`, `map`, `bind`, `seq` as continuous morphisms
+* `ContinuousHom.curry`: currying of continuous functions, as an order isomorphism
 
 ## Instances of `OmegaCompletePartialOrder`
 
@@ -635,6 +636,18 @@ def const (x : β) : α →𝒄 β := ⟨.const _ x, ωScottContinuous.const.map
 instance [Inhabited β] : Inhabited (α →𝒄 β) :=
   ⟨const default⟩
 
+instance instOrderBot [OrderBot β] : OrderBot (α →𝒄 β) where
+  bot := const ⊥
+  bot_le _ _ := bot_le
+
+@[simp] theorem bot_apply [OrderBot β] (x : α) : (⊥ : α →𝒄 β) x = ⊥ := rfl
+
+instance instOrderTop [OrderTop β] : OrderTop (α →𝒄 β) where
+  top := const ⊤
+  le_top _ _ := le_top
+
+@[simp] theorem top_apply [OrderTop β] (x : α) : (⊤ : α →𝒄 β) x = ⊤ := rfl
+
 /-- The map from continuous functions to monotone functions is itself a monotone function. -/
 @[simps]
 def toMono : (α →𝒄 β) →o α →o β where
@@ -703,6 +716,23 @@ lemma ωScottContinuous_apply
       apply le_ωSup_of_le i
       rfl
 
+/-- A function into continuous functions is continuous if each of its evaluations is. -/
+@[fun_prop]
+theorem ωScottContinuous_of_apply₂ {f : α → β →𝒄 γ} (hf : ∀ b, ωScottContinuous (f · b)) :
+    ωScottContinuous f :=
+  ωScottContinuous.of_monotone_map_ωSup
+    ⟨fun _ _ h b ↦ (hf b).monotone h, fun c ↦ by ext b; exact (hf b).map_ωSup c⟩
+
+theorem ωScottContinuous_iff_apply₂ {f : α → β →𝒄 γ} :
+    ωScottContinuous f ↔ ∀ b, ωScottContinuous (f · b) :=
+  ⟨fun hf _ ↦ ωScottContinuous_apply hf ωScottContinuous.const, ωScottContinuous_of_apply₂⟩
+
+/-- `ofFun` is continuous in its function argument. -/
+@[fun_prop]
+theorem ωScottContinuous_ofFun {f : α → β → γ} (hf : ωScottContinuous f)
+    (hf' : ∀ x, ωScottContinuous (f x)) : ωScottContinuous fun x ↦ ofFun (f x) (hf' x) :=
+  ωScottContinuous_of_apply₂ hf.apply₂
+
 namespace Prod
 
 /-- The application of continuous functions as a continuous function. -/
@@ -718,6 +748,32 @@ theorem ωSup_apply_ωSup (c₀ : Chain (α →𝒄 β)) (c₁ : Chain α) :
 @[simps!]
 def flip {α : Type*} (f : α → β →𝒄 γ) : β →𝒄 α → γ :=
   ofFun fun x y ↦ f y x
+
+/-- Curry/uncurry as an order isomorphism between `α × β →𝒄 γ` and `α →𝒄 β →𝒄 γ`. -/
+def curry : (α × β →𝒄 γ) ≃o (α →𝒄 β →𝒄 γ) where
+  toFun f := ofFun fun x ↦ ofFun fun y ↦ f (x, y)
+  invFun f := ofFun fun p ↦ f p.1 p.2
+  map_rel_iff' := ⟨fun h p ↦ h p.1 p.2, fun h x y ↦ h (x, y)⟩
+
+@[simp]
+theorem curry_apply (f : α × β →𝒄 γ) (x : α) (y : β) : curry f x y = f (x, y) :=
+  rfl
+
+@[simp]
+theorem curry_symm_apply (f : α →𝒄 β →𝒄 γ) (p : α × β) : curry.symm f p = f p.1 p.2 :=
+  rfl
+
+/-- Swap the arguments of a continuous function of two arguments. -/
+def swap (f : α →𝒄 β →𝒄 γ) : β →𝒄 α →𝒄 γ :=
+  ofFun fun y ↦ ofFun fun x ↦ f x y
+
+@[simp]
+theorem swap_apply (f : α →𝒄 β →𝒄 γ) (x : α) (y : β) : swap f y x = f x y :=
+  rfl
+
+@[simp]
+theorem swap_swap (f : α →𝒄 β →𝒄 γ) : swap (swap f) = f :=
+  rfl
 
 /-- `Part.bind` as a continuous function. -/
 @[simps! apply]
