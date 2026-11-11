@@ -217,6 +217,27 @@ theorem lintegral_mul_le_Lp_mul_Lq (μ : Measure α) {p q : ℝ} (hpq : p.Holder
   -- non-⊤ non-zero case
   exact ENNReal.lintegral_mul_le_Lp_mul_Lq_of_ne_zero_of_ne_top hpq hf hf_top hg_top hf_zero hg_zero
 
+/-- **Cauchy-Schwarz inequality** for functions `α → ℝ≥0∞`, squared version. -/
+theorem lintegral_mul_sq_le_sq_mul_sq {f g : α → ℝ≥0∞} (hf : AEMeasurable f μ)
+    (hg : AEMeasurable g μ) :
+    (∫⁻ a, f a * g a ∂μ) ^ 2 ≤ (∫⁻ a, f a ^ 2 ∂μ) * ∫⁻ a, g a ^ 2 ∂μ := by
+  have := pow_le_pow_left' (lintegral_mul_le_Lp_mul_Lq μ .two_two hf hg) 2
+  simpa only [Pi.mul_apply, one_div, mul_pow, ← rpow_two, rpow_inv_rpow two_ne_zero] using this
+
+/-- Special case of the **Cauchy-Schwarz inequality**: the square of the integral is at most the
+total mass times the integral of the square. -/
+theorem sq_lintegral_le_measure_univ_mul_lintegral_sq (f : α → ℝ≥0∞) :
+    (∫⁻ a, f a ∂μ) ^ 2 ≤ μ Set.univ * ∫⁻ a, f a ^ 2 ∂μ := by
+  obtain ⟨g, hg, hgf, hfg⟩ := exists_measurable_le_lintegral_eq μ f
+  grw [hfg, ← lintegral_mono fun a ↦ pow_le_pow_left' (hgf a) 2]
+  simpa [mul_comm] using lintegral_mul_sq_le_sq_mul_sq hg.aemeasurable (aemeasurable_const (b := 1))
+
+/-- For a measure of total mass at most one, such as a probability measure, the square of the
+integral is at most the integral of the square. -/
+theorem sq_lintegral_le_lintegral_sq (f : α → ℝ≥0∞) (hμ : μ Set.univ ≤ 1) :
+    (∫⁻ a, f a ∂μ) ^ 2 ≤ ∫⁻ a, f a ^ 2 ∂μ :=
+  (sq_lintegral_le_measure_univ_mul_lintegral_sq f).trans (mul_le_of_le_one_left' hμ)
+
 /-- A different formulation of Hölder's inequality for two functions, with two exponents that sum to
 1, instead of reciprocals of -/
 theorem lintegral_mul_norm_pow_le {α} [MeasurableSpace α] {μ : Measure α}
