@@ -56,6 +56,14 @@ theorem card_filter_univ_succ' (p : Fin (n + 1) → Prop) [DecidablePred p] :
     #{x | p x} = ite (p 0) 1 0 + #{x | p (.succ x)} := by
   rw [card_filter_univ_succ]; split_ifs <;> simp [add_comm]
 
+theorem countP_eq_card_filter (p : Fin n → Bool) : Fin.countP p = #{i | p i} := by
+  induction n with
+  | zero => simp
+  | succ n ih => rw [countP_succ, card_filter_univ_succ', ih]; cases p 0 <;> simp
+
+theorem countP_mem (s : Finset (Fin n)) : Fin.countP (· ∈ s) = #s := by
+  rw [countP_eq_card_filter]; simp
+
 theorem _root_.List.Vector.countP_toList (p : α → Bool) (v : List.Vector α n) :
     v.toList.countP p = #{i | p (v.get i)} := by
   induction v with

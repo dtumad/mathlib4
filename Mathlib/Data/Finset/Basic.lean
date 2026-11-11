@@ -540,6 +540,11 @@ theorem Nonempty.toList_ne_nil {s : Finset α} (hs : s.Nonempty) : s.toList ≠ 
 theorem Nonempty.not_empty_toList {s : Finset α} (hs : s.Nonempty) : ¬s.toList.isEmpty :=
   mt empty_toList.mp hs.ne_empty
 
+open scoped List in
+theorem toList_filter (p : α → Prop) [DecidablePred p] (s : Finset α) :
+    (s.filter p).toList ~ s.toList.filter p :=
+  Multiset.coe_eq_coe.1 <| by simp [← Multiset.filter_coe]
+
 end ToList
 
 /-! ### choose -/
