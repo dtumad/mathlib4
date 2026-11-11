@@ -6,6 +6,7 @@ Authors: Johan Commelin
 module
 
 public import Mathlib.Algebra.Polynomial.AlgebraMap
+public import Mathlib.Algebra.Polynomial.Div
 public import Mathlib.Algebra.Polynomial.HasseDeriv
 
 import Mathlib.Algebra.Polynomial.Eval.SMul
@@ -20,6 +21,8 @@ import Mathlib.Algebra.Polynomial.Eval.SMul
   `(Polynomial.hasseDeriv k f).eval r`
 * `Polynomial.eq_zero_of_hasseDeriv_eq_zero`:
   the identity principle: a polynomial is 0 iff all its Hasse derivatives are zero
+* `Polynomial.le_rootMultiplicity_iff_isRoot_hasseDeriv`: for `f ≠ 0`, the root multiplicity of `f`
+  at `r` is at least `n` iff the Hasse derivatives of `f` of order `< n` vanish at `r`
 -/
 
 @[expose] public section
@@ -116,6 +119,18 @@ theorem eq_zero_of_hasseDeriv_eq_zero (f : R[X]) (r : R)
   ext k
   rw [taylor_coeff, h, coeff_zero]
 
+/-- Hasse derivatives commute with Taylor expansion. -/
+theorem hasseDeriv_taylor (k : ℕ) : hasseDeriv k (taylor r f) = taylor r (hasseDeriv k f) := by
+  ext n
+  rw [hasseDeriv_coeff, taylor_coeff, taylor_coeff, ← LinearMap.comp_apply, hasseDeriv_comp,
+    LinearMap.smul_apply, eval_smul, nsmul_eq_mul, Nat.choose_symm_add]
+
+/-- `X ^ n` divides the Taylor expansion of `f` at `r` iff the Hasse derivatives of `f` of
+order `< n` vanish at `r`. -/
+theorem X_pow_dvd_taylor_iff {r : R} {f : R[X]} {n : ℕ} :
+    X ^ n ∣ taylor r f ↔ ∀ m < n, (hasseDeriv m f).IsRoot r := by
+  simp only [X_pow_dvd_iff, taylor_coeff, IsRoot]
+
 @[simp] lemma map_taylor {R S : Type*} [Semiring R] [Semiring S] (p : R[X]) (r : R) (f : R →+* S) :
     (p.taylor r).map f = (p.map f).taylor (f r) := by
   simp [taylor_apply, Polynomial.map_comp]
@@ -208,6 +223,22 @@ theorem sum_taylor_eq (f : R[X]) (r : R) :
     ((taylor r f).sum fun i a => C a * (X - C r) ^ i) = f := by
   rw [← comp_eq_sum_left, sub_eq_add_neg, ← C_neg, ← taylor_apply, taylor_taylor, neg_add_cancel,
     taylor_zero]
+
+/-- `(X - C r) ^ n` divides `f` iff the Hasse derivatives of `f` of order `< n` vanish at `r`. -/
+theorem X_sub_C_pow_dvd_iff_isRoot_hasseDeriv {r : R} {f : R[X]} {n : ℕ} :
+    (X - C r) ^ n ∣ f ↔ ∀ m < n, (hasseDeriv m f).IsRoot r := by
+  rw [X_sub_C_pow_dvd_iff, ← taylor_apply, X_pow_dvd_taylor_iff]
+
+/-- For `f ≠ 0`, the root multiplicity of `f` at `r` is at least `n` iff the Hasse derivatives of
+`f` of order `< n` vanish at `r`. Unlike `lt_rootMultiplicity_iff_isRoot_iterate_derivative`, this
+holds in any characteristic. -/
+theorem le_rootMultiplicity_iff_isRoot_hasseDeriv {r : R} {f : R[X]} {n : ℕ} (hf : f ≠ 0) :
+    n ≤ f.rootMultiplicity r ↔ ∀ m < n, (hasseDeriv m f).IsRoot r := by
+  rw [le_rootMultiplicity_iff hf, X_sub_C_pow_dvd_iff_isRoot_hasseDeriv]
+
+theorem lt_rootMultiplicity_iff_isRoot_hasseDeriv {r : R} {f : R[X]} {n : ℕ} (hf : f ≠ 0) :
+    n < f.rootMultiplicity r ↔ ∀ m ≤ n, (hasseDeriv m f).IsRoot r := by
+  simp_rw [← Nat.add_one_le_iff, le_rootMultiplicity_iff_isRoot_hasseDeriv hf, Nat.lt_add_one_iff]
 
 end CommRing
 
