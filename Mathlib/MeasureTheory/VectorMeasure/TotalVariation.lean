@@ -34,7 +34,8 @@ namespace MeasureTheory
 
 namespace VectorMeasure
 
-variable {𝓧 M : Type*} {m𝓧 : MeasurableSpace 𝓧} [NormedAddCommGroup M] {μ ν : VectorMeasure 𝓧 M}
+variable {𝓧 𝓨 M : Type*} {m𝓧 : MeasurableSpace 𝓧} {m𝓨 : MeasurableSpace 𝓨} [NormedAddCommGroup M]
+  {μ ν : VectorMeasure 𝓧 M}
 
 /-- Total variation distance between two vector measures, with value in `ℝ≥0∞`. -/
 noncomputable def etvDist (μ ν : VectorMeasure 𝓧 M) : ℝ≥0∞ := (μ - ν).variation Set.univ
@@ -79,6 +80,17 @@ lemma etvDist_restrict_add_compl {s : Set 𝓧} (hs : MeasurableSet s) :
       etvDist μ ν := by
   simp [etvDist, ← restrict_sub, variation_restrict hs, variation_restrict hs.compl,
     MeasurableSet.univ, Measure.restrict_apply, ← measure_union disjoint_compl_right hs.compl]
+
+/-- **Data processing inequality** for the total variation distance of vector measures:
+pushing forward along a function does not increase the distance. -/
+theorem etvDist_map_le (μ ν : VectorMeasure 𝓧 M) (f : 𝓧 → 𝓨) :
+    etvDist (μ.map f) (ν.map f) ≤ etvDist μ ν := by
+  by_cases hf : Measurable f
+  · calc etvDist (μ.map f) (ν.map f)
+    _ = ((μ - ν).map f).variation Set.univ := by simp [etvDist, ← mapGm_apply, map_sub]
+    _ ≤ (μ - ν).variation.map f Set.univ := variation_map_le _
+    _ = etvDist μ ν := by rw [Measure.map_apply hf .univ, Set.preimage_univ, etvDist]
+  · simp [map_not_measurable _ hf]
 
 end VectorMeasure
 

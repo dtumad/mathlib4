@@ -34,6 +34,8 @@ so that it takes values in `[0, 1]`.
 
 * `tvDist_self`, `tvDist_eq_zero_iff`, `tvDist_comm`, `tvDist_triangle`: the total variation
   distance between finite measures is a distance.
+* `etvDist_map_le`, `tvDist_map_le`: data processing inequality, the total variation distance does
+  not increase under pushforward along a measurable map.
 -/
 
 @[expose] public section
@@ -44,7 +46,7 @@ open scoped ENNReal
 
 namespace MeasureTheory
 
-variable {𝓧 : Type*} {m𝓧 : MeasurableSpace 𝓧} {μ ν : Measure 𝓧}
+variable {𝓧 𝓨 : Type*} {m𝓧 : MeasurableSpace 𝓧} {m𝓨 : MeasurableSpace 𝓨} {μ ν : Measure 𝓧}
 
 open Classical in
 /-- Total variation distance between two finite measures, with value in `ℝ≥0∞`.
@@ -160,6 +162,16 @@ lemma etvDist_restrict_add_compl {s : Set 𝓧} (hs : MeasurableSet s) :
     simp only [etvDist_ne_top_iff, isFiniteMeasure_restrict] at h'
     refine h ⟨⟨?_⟩, ⟨?_⟩⟩ <;> rw [← measure_add_measure_compl hs] <;> simp [h', lt_top_iff_ne_top]
 
+variable (μ ν) in
+/-- **Data processing inequality** for the total variation distance and measurable functions. -/
+theorem etvDist_map_le {f : 𝓧 → 𝓨} (hf : Measurable f) :
+    etvDist (μ.map f) (ν.map f) ≤ etvDist μ ν := by
+  by_cases h : IsFiniteMeasure μ ∧ IsFiniteMeasure ν
+  · obtain ⟨_, _⟩ := h
+    simp only [etvDist_eq_etvDist_toSignedMeasure, ← VectorMeasure.map_toSignedMeasure hf]
+    exact VectorMeasure.etvDist_map_le _ _ f
+  · simp [etvDist_of_not_isFiniteMeasure h]
+
 lemma etvDist_of_ge [IsFiniteMeasure ν] (hμν : ν ≤ μ) :
     etvDist μ ν = μ Set.univ - ν Set.univ := by
   by_cases hμ : IsFiniteMeasure μ
@@ -245,6 +257,16 @@ lemma tvDist_restrict_add_compl [IsFiniteMeasure μ] [IsFiniteMeasure ν] {s : S
     tvDist (μ.restrict s) (ν.restrict s) + tvDist (μ.restrict sᶜ) (ν.restrict sᶜ) = tvDist μ ν := by
   unfold tvDist
   rw [← ENNReal.toReal_add (by simp) (by simp), etvDist_restrict_add_compl hs]
+
+variable (μ ν) in
+/-- **Data processing inequality** for the total variation distance and measurable functions. -/
+theorem tvDist_map_le {f : 𝓧 → 𝓨} (hf : Measurable f) :
+    tvDist (μ.map f) (ν.map f) ≤ tvDist μ ν := by
+  by_cases h : IsFiniteMeasure μ ∧ IsFiniteMeasure ν
+  · obtain ⟨_, _⟩ := h
+    exact ENNReal.toReal_mono (etvDist_ne_top _ _) (etvDist_map_le μ ν hf)
+  · refine (tvDist_of_not_isFiniteMeasure ?_).trans_le tvDist_nonneg
+    simpa [Measure.isFiniteMeasure_map_iff hf.aemeasurable] using h
 
 lemma tvDist_of_ge [IsFiniteMeasure μ] (hμν : ν ≤ μ) :
     tvDist μ ν = μ.real Set.univ - ν.real Set.univ := by
