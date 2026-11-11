@@ -258,6 +258,14 @@ theorem uniformOfFinset_apply :
 
 end Measure
 
+/-- `uniformOfFinset s` is the uniform measure `ProbabilityTheory.uniformOn` on `s`. -/
+theorem uniformOfFinset_eq_uniformOn : uniformOfFinset s = uniformOn (s : Set α) := by
+  ext t ht
+  classical
+  have hst : (s : Set α) ∩ t = ↑{x ∈ s | x ∈ t} := by ext; simp
+  rw [uniformOfFinset_apply, uniformOn, cond_apply s.measurableSet, hst,
+    Measure.count_apply_finset, Measure.count_apply_finset, ENNReal.div_eq_inv_mul]
+
 end UniformOfFinset
 
 section UniformOfFintype
