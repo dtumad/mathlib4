@@ -201,6 +201,20 @@ lemma inf_apply {s : Set α} (hs : MeasurableSet s) :
       rw [mem_ofPred_eq] at hk₁ hk₂
       exact False.elim <| hk₂.not_ge hk₁
 
+/-- The supremum of a directed family of measures is computed setwise on measurable sets. -/
+theorem iSup_apply_of_directed {ι : Type*} {μ : ι → Measure α} (hμ : Directed (· ≤ ·) μ)
+    (hs : MeasurableSet s) : (⨆ i, μ i) s = ⨆ i, μ i s := by
+  refine le_antisymm ?_ (iSup_le fun i ↦ le_iSup μ i s)
+  let ν : Measure α := ofMeasurable (fun t _ ↦ ⨆ i, μ i t) (by simp) fun t ht hd ↦ by
+    simp_rw [measure_iUnion hd ht, tsum_eq_iSup_sum]
+    rw [iSup_comm]
+    refine iSup_congr fun u ↦ (ENNReal.finsetSum_iSup fun i j ↦ ?_).symm
+    exact (hμ i j).imp fun k hk n ↦ ⟨hk.1 (t n), hk.2 (t n)⟩
+  have hν : (⨆ i, μ i) ≤ ν := iSup_le fun i ↦ le_iff.2 fun t ht ↦ by
+    rw [ofMeasurable_apply t ht]
+    exact le_iSup (fun i ↦ μ i t) i
+  simpa [ν, ofMeasurable_apply s hs] using hν s
+
 @[simp]
 theorem _root_.MeasureTheory.OuterMeasure.toMeasure_top :
     (⊤ : OuterMeasure α).toMeasure (by rw [OuterMeasure.top_caratheodory]; exact le_top) =
