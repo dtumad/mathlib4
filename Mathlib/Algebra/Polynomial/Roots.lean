@@ -99,6 +99,15 @@ theorem count_roots [DecidableEq R] (p : R[X]) : p.roots.count a = rootMultiplic
   rw [roots_def, dite_eq_right hp]
   exact (Classical.choose_spec (exists_multiset_roots hp)).2 a
 
+/-- The root multiplicities of `p` at the points of a finite set sum to at most `natDegree p`. -/
+theorem sum_rootMultiplicity_le_natDegree (p : R[X]) (s : Finset R) :
+    ∑ a ∈ s, rootMultiplicity a p ≤ natDegree p := by
+  classical
+  calc ∑ a ∈ s, rootMultiplicity a p ≤ ∑ a ∈ s ∪ p.roots.toFinset, p.roots.count a := by
+        simpa using Finset.sum_le_sum_of_subset (f := (p.roots.count ·)) Finset.subset_union_left
+    _ = Multiset.card p.roots := Multiset.sum_count_eq_card fun a ha ↦ by simp [ha]
+    _ ≤ natDegree p := card_roots' p
+
 @[simp]
 theorem mem_roots' : a ∈ p.roots ↔ p ≠ 0 ∧ IsRoot p a := by
   classical

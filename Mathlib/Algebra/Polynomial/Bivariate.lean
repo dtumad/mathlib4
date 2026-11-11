@@ -59,6 +59,15 @@ lemma evalEval_map_C (x y : R) (p : R[X]) : (p.map C).evalEval x y = p.eval y :=
 lemma evalEval_CC (x y : R) (p : R) : (CC p).evalEval x y = p := by
   rw [evalEval_C, eval_C]
 
+/-- If every coefficient of `p : R[X][Y]` has natural degree at most `n`, then so does
+`p.eval (C y)`. -/
+lemma natDegree_eval_C_le {p : R[X][Y]} {n : ℕ} (h : ∀ i, (p.coeff i).natDegree ≤ n) (y : R) :
+    (p.eval (C y)).natDegree ≤ n := by
+  rw [eval_eq_sum]
+  refine natDegree_sum_le_of_forall_le _ _ fun i _ ↦ natDegree_mul_le.trans ?_
+  rw [← C_pow, natDegree_C, add_zero]
+  exact h i
+
 @[simp]
 lemma evalEval_zero (x y : R) : (0 : R[X][Y]).evalEval x y = 0 := by
   simp only [evalEval, eval_zero]

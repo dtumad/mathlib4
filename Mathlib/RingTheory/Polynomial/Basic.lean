@@ -94,6 +94,19 @@ theorem monomial_coe_mem_degreeLT {n : ℕ} (i : Fin n) (a : R) : monomial i a �
 theorem degreeLT_mono {m n : ℕ} (H : m ≤ n) : degreeLT R m ≤ degreeLT R n := fun _ hf =>
   mem_degreeLT.2 (lt_of_lt_of_le (mem_degreeLT.1 hf) <| WithBot.coe_le_coe.2 H)
 
+@[simp]
+theorem degreeLT_zero : degreeLT R 0 = ⊥ := by
+  ext; simp [mem_degreeLT]
+
+theorem mem_degreeLT_of_mul_left [NoZeroDivisors R] {n : ℕ} {f g : R[X]} (hf : f ≠ 0)
+    (h : f * g ∈ degreeLT R n) : g ∈ degreeLT R n := by
+  rw [mem_degreeLT, degree_mul] at h
+  exact mem_degreeLT.2 <| (le_add_of_nonneg_left (zero_le_degree_iff.2 hf)).trans_lt h
+
+theorem mem_degreeLT_of_mul_right [NoZeroDivisors R] {n : ℕ} {f g : R[X]} (hg : g ≠ 0)
+    (h : f * g ∈ degreeLT R n) : f ∈ degreeLT R n :=
+  mem_degreeLT.2 <| (degree_le_mul_left f hg).trans_lt (mem_degreeLT.1 h)
+
 theorem degreeLT_eq_span_X_pow [DecidableEq R] {n : ℕ} :
     degreeLT R n = Submodule.span R ↑((Finset.range n).image fun n => X ^ n : Finset R[X]) := by
   apply le_antisymm
@@ -135,6 +148,10 @@ theorem degreeLT_succ_eq_degreeLE {n : ℕ} : degreeLT R (n + 1) = degreeLE R n 
   · simp_rw [x_zero, Submodule.zero_mem]
   · rw [mem_degreeLT, mem_degreeLE, ← natDegree_lt_iff_degree_lt (by rwa [ne_eq]),
       ← natDegree_le_iff_degree_le, Nat.lt_succ_iff]
+
+theorem mem_degreeLT_add_one_iff_natDegree_le {n : ℕ} {f : R[X]} :
+    f ∈ degreeLT R (n + 1) ↔ natDegree f ≤ n := by
+  rw [degreeLT_succ_eq_degreeLE, mem_degreeLE, natDegree_le_iff_degree_le]
 
 /-- The equivalence between monic polynomials of degree `n` and polynomials of degree less than
 `n`, formed by adding a term `X ^ n`. -/
