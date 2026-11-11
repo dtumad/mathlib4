@@ -266,9 +266,39 @@ theorem _root_.AEMeasurable.ae_of_bind {γ : Type*} {_ : MeasurableSpace γ} {m 
     ∀ᵐ a ∂m, AEMeasurable g (f a) :=
   ae_of_ae_map hf hg.ae_of_join
 
+/-- Converse of `ae_ae_of_ae_bind` for a measurable property. -/
+theorem ae_bind_of_ae_ae {m : Measure α} {f : α → Measure β} {p : β → Prop}
+    (hf : AEMeasurable f m) (hp : MeasurableSet {b | p b}) (h : ∀ᵐ a ∂m, ∀ᵐ b ∂f a, p b) :
+    ∀ᵐ b ∂m.bind f, p b := by
+  rw [ae_iff, ← compl_ofPred, bind_apply hp.compl hf]
+  exact (lintegral_eq_zero_iff' ((measurable_coe hp.compl).comp_aemeasurable hf)).2 h
+
+theorem ae_bind_iff {m : Measure α} {f : α → Measure β} {p : β → Prop} (hf : AEMeasurable f m)
+    (hp : MeasurableSet {b | p b}) : (∀ᵐ b ∂m.bind f, p b) ↔ ∀ᵐ a ∂m, ∀ᵐ b ∂f a, p b :=
+  ⟨ae_ae_of_ae_bind hf, ae_bind_of_ae_ae hf hp⟩
+
 theorem bind_congr_right {μ : Measure α} {f g : α → Measure β} (h : f =ᵐ[μ] g) :
     μ.bind f = μ.bind g :=
   congrArg join <| map_congr h
+
+@[gcongr]
+theorem bind_mono_left {μ ν : Measure α} {f : α → Measure β} (h : μ ≤ ν) (hf : AEMeasurable f ν) :
+    μ.bind f ≤ ν.bind f := by
+  refine le_iff.2 fun s hs ↦ ?_
+  rw [bind_apply hs hf, bind_apply hs (hf.mono_measure h)]
+  exact lintegral_mono' h le_rfl
+
+theorem bind_mono_right_ae {μ : Measure α} {f g : α → Measure β} (h : f ≤ᵐ[μ] g)
+    (hf : AEMeasurable f μ) (hg : AEMeasurable g μ) : μ.bind f ≤ μ.bind g := by
+  refine le_iff.2 fun s hs ↦ ?_
+  rw [bind_apply hs hf, bind_apply hs hg]
+  exact lintegral_mono_ae <| h.mono fun a ha ↦ ha s
+
+/-- See `bind_mono_right_ae` for a version with an almost everywhere inequality. -/
+@[gcongr]
+theorem bind_mono_right {μ : Measure α} {f g : α → Measure β} (h : ∀ a, f a ≤ g a)
+    (hf : AEMeasurable f μ) (hg : AEMeasurable g μ) : μ.bind f ≤ μ.bind g :=
+  bind_mono_right_ae (.of_forall h) hf hg
 
 @[simp]
 lemma bind_const {m : Measure α} {ν : Measure β} : m.bind (fun _ ↦ ν) = m Set.univ • ν := by
@@ -299,6 +329,18 @@ theorem bind_sum {ι : Type*} (m : ι → Measure α) (f : α → Measure β)
     (h : AEMeasurable f (sum fun i => m i)) :
     (sum fun (i : ι) ↦ m i).bind f = sum fun (i : ι) ↦ (m i).bind f := by
   simp_rw [bind, map_sum h, join_sum]
+
+theorem bind_add_left (μ ν : Measure α) {f : α → Measure β} (hf : AEMeasurable f (μ + ν)) :
+    (μ + ν).bind f = μ.bind f + ν.bind f := by
+  ext s hs
+  rw [add_apply, bind_apply hs hf, bind_apply hs (hf.mono_measure (Measure.le_add_right le_rfl)),
+    bind_apply hs (hf.mono_measure (Measure.le_add_left le_rfl)), lintegral_add_measure]
+
+theorem bind_add_right (μ : Measure α) {f g : α → Measure β} (hf : AEMeasurable f μ)
+    (hg : AEMeasurable g μ) : μ.bind (f + g) = μ.bind f + μ.bind g := by
+  ext s hs
+  rw [add_apply, bind_apply hs (hf.add hg), bind_apply hs hf, bind_apply hs hg]
+  exact lintegral_add_left' ((measurable_coe hs).comp_aemeasurable hf) _
 
 lemma bind_smul {R : Type*} [SMul R ℝ≥0∞] [IsScalarTower R ℝ≥0∞ ℝ≥0∞] (c : R) (m : Measure α)
     {f : α → Measure β} (hf : AEMeasurable f m) : (c • m).bind f = c • (m.bind f) := by
