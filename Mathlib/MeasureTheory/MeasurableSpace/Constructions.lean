@@ -886,6 +886,55 @@ theorem measurableSet_range_inr [MeasurableSpace α] :
 
 end Sum
 
+/-- The measurable space on `Option α` in which a set is measurable if and only if its preimage
+under `some` is. This is the coproduct of `α` and a point; in particular `{none}` is measurable. -/
+instance Option.instMeasurableSpace [m : MeasurableSpace α] : MeasurableSpace (Option α) :=
+  m.map some
+
+section Option
+
+variable [MeasurableSpace α] [MeasurableSpace β]
+
+theorem measurableSet_option_iff {s : Set (Option α)} :
+    MeasurableSet s ↔ MeasurableSet (some ⁻¹' s) :=
+  Iff.rfl
+
+theorem measurable_from_option_iff {f : Option α → β} : Measurable f ↔ Measurable (f ∘ some) :=
+  Iff.rfl
+
+@[fun_prop]
+theorem measurable_some : Measurable (@some α) := fun _ ↦ id
+
+@[fun_prop]
+theorem Measurable.optionElim {f : α → β} {b : β} (hf : Measurable f) :
+    Measurable fun o : Option α ↦ o.elim b f :=
+  hf
+
+@[fun_prop]
+theorem Measurable.optionMap {f : α → β} (hf : Measurable f) : Measurable (Option.map f) :=
+  measurable_some.comp hf
+
+@[simp] theorem measurableSet_some_image {s : Set α} :
+    MeasurableSet (some '' s) ↔ MeasurableSet s := by
+  rw [measurableSet_option_iff, (Option.some_injective α).preimage_image]
+
+alias ⟨_, MeasurableSet.some_image⟩ := measurableSet_some_image
+
+@[simp] theorem measurableSet_none : MeasurableSet ({none} : Set (Option α)) := by
+  simp [measurableSet_option_iff, Set.preimage]
+
+instance Option.instMeasurableSingletonClass [MeasurableSingletonClass α] :
+    MeasurableSingletonClass (Option α) where
+  measurableSet_singleton
+    | none => measurableSet_none
+    | some a => by simpa using (measurableSet_singleton a).some_image
+
+instance Option.instDiscreteMeasurableSpace [DiscreteMeasurableSpace α] :
+    DiscreteMeasurableSpace (Option α) where
+  forall_measurableSet _ := measurableSet_option_iff.2 .of_discrete
+
+end Option
+
 instance Sigma.instMeasurableSpace {α} {β : α → Type*} [m : ∀ a, MeasurableSpace (β a)] :
     MeasurableSpace (Sigma β) :=
   ⨅ a, (m a).map (Sigma.mk a)

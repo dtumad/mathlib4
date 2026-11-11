@@ -133,6 +133,9 @@ lemma natCast {α : Type*} [MeasurableSpace α]
 
 end MeasurableEmbedding
 
+theorem measurableEmbedding_some [MeasurableSpace α] : MeasurableEmbedding (@some α) :=
+  ⟨Option.some_injective α, measurable_some, fun _ ↦ MeasurableSet.some_image⟩
+
 section gluing
 variable {α₁ α₂ α₃ : Type*} {mα : MeasurableSpace α} {mβ : MeasurableSpace β}
   {mα₁ : MeasurableSpace α₁} {mα₂ : MeasurableSpace α₂} {mα₃ : MeasurableSpace α₃}
@@ -415,6 +418,12 @@ def sumCongr (ab : α ≃ᵐ β) (cd : γ ≃ᵐ δ) : α ⊕ γ ≃ᵐ β ⊕ �
   toEquiv := .sumCongr ab.toEquiv cd.toEquiv
   measurable_toFun := ab.measurable.sumMap cd.measurable
   measurable_invFun := ab.symm.measurable.sumMap cd.symm.measurable
+
+/-- `Option α` is measurably equivalent to `α ⊕ PUnit`. -/
+def optionEquivSumPUnit : Option α ≃ᵐ α ⊕ PUnit where
+  toEquiv := .optionEquivSumPUnit α
+  measurable_toFun := measurable_inl.optionElim
+  measurable_invFun := measurable_some.sumElim measurable_const
 
 /-- `s ×ˢ t ≃ (s × t)` as measurable spaces. -/
 def Set.prod (s : Set α) (t : Set β) : ↥(s ×ˢ t) ≃ᵐ s × t where
