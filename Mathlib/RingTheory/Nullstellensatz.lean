@@ -21,6 +21,12 @@ Suggestions for better ways to state this theorem or organize things are welcome
 
 The machinery around `vanishingIdeal` and `zeroLocus` is also minimal, I only added lemmas
   directly needed in this proof, since I'm not sure if they are the right approach.
+
+Evaluation identifies the points of `zeroLocus K I` with the `k`-algebra homomorphisms
+`MvPolynomial σ k ⧸ I →ₐ[k] K` (`MvPolynomial.zeroLocusEquivAlgHom`). Hence, when the quotient is
+finite-dimensional over `k`, the zero locus is finite and has at most
+`Module.finrank k (MvPolynomial σ k ⧸ I)` points
+(`MvPolynomial.ncard_zeroLocus_le_finrank_quotient`).
 -/
 
 @[expose] public section
@@ -42,6 +48,10 @@ def zeroLocus (I : Ideal (MvPolynomial σ k)) : Set (σ → K) :=
 @[simp]
 theorem mem_zeroLocus_iff {I : Ideal (MvPolynomial σ k)} {x : σ → K} :
     x ∈ zeroLocus K I ↔ ∀ p ∈ I, aeval x p = 0 :=
+  Iff.rfl
+
+theorem mem_zeroLocus_iff_le_ker_aeval {I : Ideal (MvPolynomial σ k)} {x : σ → K} :
+    x ∈ zeroLocus K I ↔ I ≤ RingHom.ker (aeval x) :=
   Iff.rfl
 
 theorem zeroLocus_anti_mono {I J : Ideal (MvPolynomial σ k)} (h : I ≤ J) :
@@ -97,6 +107,20 @@ theorem zeroLocus_span (S : Set (MvPolynomial σ k)) :
   eq_of_forall_le_iff fun _ => le_zeroLocus_iff_le_vanishingIdeal.trans <|
     Ideal.span_le.trans forall₂_comm
 
+theorem zeroLocus_sup (I J : Ideal (MvPolynomial σ k)) :
+    zeroLocus K (I ⊔ J) = zeroLocus K I ∩ zeroLocus K J :=
+  zeroLocus_vanishingIdeal_galoisConnection.l_sup
+
+theorem zeroLocus_iSup {ι : Sort*} (I : ι → Ideal (MvPolynomial σ k)) :
+    zeroLocus K (⨆ i, I i) = ⋂ i, zeroLocus K (I i) :=
+  zeroLocus_vanishingIdeal_galoisConnection.l_iSup
+
+@[simp]
+theorem zeroLocus_radical (I : Ideal (MvPolynomial σ k)) :
+    zeroLocus K I.radical = zeroLocus K I :=
+  (zeroLocus_anti_mono I.le_radical).antisymm fun x hx _ ⟨n, hn⟩ ↦
+    eq_zero_of_pow_eq_zero (n := n) <| by rw [← map_pow]; exact hx _ hn
+
 theorem mem_vanishingIdeal_singleton_iff (x : σ → K) (p : MvPolynomial σ k) :
     p ∈ (vanishingIdeal k {x} : Ideal (MvPolynomial σ k)) ↔ aeval x p = 0 :=
   ⟨fun h => h x rfl, fun hpx _ hy => hy.symm ▸ hpx⟩
@@ -144,6 +168,48 @@ theorem pointToPoint_zeroLocus_le (I : Ideal (MvPolynomial σ K)) :
   (le_trans (le_vanishingIdeal_zeroLocus (K := K) I)
       (hx.2 ▸ vanishingIdeal_anti_mono (Set.singleton_subset_iff.2 hx.1)) :
     I ≤ J.asIdeal)
+
+variable (K) in
+/-- Evaluation identifies the points of `zeroLocus K I` with the `k`-algebra homomorphisms
+`MvPolynomial σ k ⧸ I →ₐ[k] K`. -/
+def zeroLocusEquivAlgHom (I : Ideal (MvPolynomial σ k)) :
+    zeroLocus K I ≃ (MvPolynomial σ k ⧸ I →ₐ[k] K) where
+  toFun x := Ideal.Quotient.liftₐ I (aeval x.1) (mem_zeroLocus_iff.1 x.2)
+  invFun φ := ⟨fun i ↦ φ (Ideal.Quotient.mk I (X i)), fun p hp ↦ by
+    have : aeval (fun i ↦ φ (Ideal.Quotient.mk I (X i))) = φ.comp (Ideal.Quotient.mkₐ k I) :=
+      algHom_ext fun i ↦ by simp
+    simp [this, Ideal.Quotient.eq_zero_iff_mem.2 hp]⟩
+  left_inv x := Subtype.ext <| funext fun i ↦
+    (AlgHom.congr_fun (Ideal.Quotient.liftₐ_comp I _ (mem_zeroLocus_iff.1 x.2)) (X i)).trans
+      (aeval_X _ i)
+  right_inv φ := Ideal.Quotient.algHom_ext _ <| by
+    rw [Ideal.Quotient.liftₐ_comp]
+    exact algHom_ext fun i ↦ by simp
+
+@[simp]
+theorem zeroLocusEquivAlgHom_apply_mk (I : Ideal (MvPolynomial σ k)) (x : zeroLocus K I)
+    (p : MvPolynomial σ k) : zeroLocusEquivAlgHom K I x (Ideal.Quotient.mk I p) = aeval x.1 p :=
+  rfl
+
+@[simp]
+theorem zeroLocusEquivAlgHom_symm_apply_coe (I : Ideal (MvPolynomial σ k))
+    (φ : MvPolynomial σ k ⧸ I →ₐ[k] K) :
+    ((zeroLocusEquivAlgHom K I).symm φ : σ → K) = fun i ↦ φ (Ideal.Quotient.mk I (X i)) :=
+  rfl
+
+/-- If `MvPolynomial σ k ⧸ I` is finite-dimensional over `k`, then `I` has finitely many zeros
+in `σ → K`. -/
+theorem finite_zeroLocus_of_finite_quotient (I : Ideal (MvPolynomial σ k))
+    [Module.Finite k (MvPolynomial σ k ⧸ I)] : (zeroLocus K I).Finite :=
+  have := Finite.of_equiv _ (zeroLocusEquivAlgHom K I).symm
+  Set.toFinite _
+
+/-- The number of zeros of `I` in `σ → K` is at most the dimension of `MvPolynomial σ k ⧸ I`
+over `k`. -/
+theorem ncard_zeroLocus_le_finrank_quotient (I : Ideal (MvPolynomial σ k))
+    [Module.Finite k (MvPolynomial σ k ⧸ I)] :
+    (zeroLocus K I).ncard ≤ Module.finrank k (MvPolynomial σ k ⧸ I) :=
+  (Nat.card_congr (zeroLocusEquivAlgHom K I)).trans_le (card_algHom_le_finrank k _ K)
 
 variable [IsAlgClosed K] [Finite σ]
 
