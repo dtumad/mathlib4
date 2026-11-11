@@ -47,6 +47,8 @@ open ProbabilityTheory
 
 open MeasureTheory MeasurableSpace Finset
 
+open scoped ENNReal
+
 namespace ProbabilityTheory
 
 variable {Ω : Type*} [MeasurableSpace Ω] {s : Set Ω}
@@ -123,6 +125,19 @@ theorem uniformOn_singleton (ω : Ω) (t : Set Ω) [Decidable (ω ∈ t)] :
   split_ifs
   · rw [(by simpa : ({ω} : Set Ω) ∩ t = {ω}), Measure.count_singleton]
   · simpa
+
+@[simp]
+theorem uniformOn_univ_apply_singleton [Fintype Ω] (ω : Ω) :
+    uniformOn Set.univ {ω} = (Fintype.card Ω : ℝ≥0∞)⁻¹ := by
+  simp [uniformOn_univ]
+
+theorem lintegral_uniformOn_finset (s : Finset Ω) (f : Ω → ℝ≥0∞) :
+    ∫⁻ ω, f ω ∂uniformOn (s : Set Ω) = (∑ ω ∈ s, f ω) / #s := by
+  simp [uniformOn, cond, lintegral_finset, ENNReal.div_eq_inv_mul]
+
+theorem lintegral_uniformOn_univ [Fintype Ω] (f : Ω → ℝ≥0∞) :
+    ∫⁻ ω, f ω ∂uniformOn Set.univ = (∑ ω, f ω) / Fintype.card Ω := by
+  simpa using lintegral_uniformOn_finset Finset.univ f
 
 variable {s t u : Set Ω}
 
@@ -207,6 +222,33 @@ theorem uniformOn_disjoint_union (hs : s.Finite) (ht : t.Finite) (hst : Disjoint
     Measure.count_ne_zero ht', (Measure.count_apply_lt_top.2 ht).ne, Measure.count_ne_zero hs',
     (Measure.count_apply_lt_top.2 hs).ne]
 
+/-- Conditioning a uniform measure on a set gives the uniform measure on the intersection. -/
+theorem cond_uniformOn (hs : s.Finite) (ht : MeasurableSet t) :
+    (uniformOn s)[|t] = uniformOn (s ∩ t) := by
+  rw [uniformOn, uniformOn,
+    cond_cond_eq_cond_inter' hs.measurableSet ht (Measure.count_apply_lt_top.2 hs).ne]
+
+/-- The pushforward of a uniform measure along a map that is injective on its support is the
+uniform measure on the image. -/
+theorem map_uniformOn {β : Type*} [MeasurableSpace β] [MeasurableSingletonClass β] {f : Ω → β}
+    (hf : Measurable f) (hfs : s.InjOn f) : (uniformOn s).map f = uniformOn (f '' s) := by
+  obtain hs | hs := s.finite_or_infinite
+  · ext t ht
+    have hst : (s ∩ f ⁻¹' t).Finite := hs.inter_of_left _
+    rw [Measure.map_apply hf ht, uniformOn, uniformOn, cond_apply hs.measurableSet,
+      cond_apply (hs.image f).measurableSet, ← Set.image_inter_preimage,
+      Measure.count_apply hs.measurableSet, Measure.count_apply hst.measurableSet,
+      Measure.count_apply (hs.image f).measurableSet,
+      Measure.count_apply (hst.image f).measurableSet, hfs.encard_image,
+      (hfs.mono Set.inter_subset_left).encard_image]
+  · rw [uniformOn_eq_zero.2 (.inl hs), uniformOn_eq_zero.2 (.inl (hs.image hfs)),
+      Measure.map_zero]
+
+theorem map_uniformOn_univ {β : Type*} [MeasurableSpace β] [MeasurableSingletonClass β]
+    {f : Ω → β} (hf : Measurable f) (hf' : f.Bijective) :
+    (uniformOn Set.univ).map f = uniformOn Set.univ := by
+  rw [map_uniformOn hf hf'.injective.injOn, Set.image_univ_of_surjective hf'.surjective]
+
 /-- A version of the law of total probability for counting probabilities. -/
 theorem uniformOn_add_compl_eq (u t : Set Ω) (hs : s.Finite) :
     uniformOn (s ∩ u) t * uniformOn s u + uniformOn (s ∩ uᶜ) t * uniformOn s uᶜ =
@@ -228,5 +270,22 @@ lemma uniformOn_pi [Finite Ω] {f : ι → Set Ω} :
   classical
   simp [← Fintype.coe_piFinset, uniformOn_apply_finset, ← Fintype.piFinset_inter,
     ENNReal.prod_div_distrib_of_ne_top]
+
+/-- The uniform measure on a product of sets is the product of the uniform measures. -/
+theorem uniformOn_prod [Finite Ω] {β : Type*} [MeasurableSpace β] [MeasurableSingletonClass β]
+    [Finite β] {t : Set β} : uniformOn (s ×ˢ t) = (uniformOn s).prod (uniformOn t) := by
+  refine (Measure.prod_eq fun u v _ _ ↦ ?_).symm
+  lift s to Finset Ω using s.toFinite
+  lift t to Finset β using t.toFinite
+  lift u to Finset Ω using u.toFinite
+  lift v to Finset β using v.toFinite
+  classical
+  simp [← Finset.coe_product, uniformOn_apply_finset, Finset.product_inter_product,
+    ENNReal.mul_div_mul_comm]
+
+theorem uniformOn_univ_prod [Finite Ω] {β : Type*} [MeasurableSpace β] [MeasurableSingletonClass β]
+    [Finite β] :
+    uniformOn (Set.univ : Set (Ω × β)) = (uniformOn Set.univ).prod (uniformOn Set.univ) := by
+  rw [← uniformOn_prod, Set.univ_prod_univ]
 
 end ProbabilityTheory
