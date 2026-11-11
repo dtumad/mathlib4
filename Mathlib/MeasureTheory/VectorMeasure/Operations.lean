@@ -385,6 +385,12 @@ theorem restrict_toSignedMeasure {μ : Measure α} [IsFiniteMeasure μ]
   rw [restrict_apply _ hs ht, Measure.toSignedMeasure_apply_measurable (ht.inter hs),
     Measure.toSignedMeasure_apply_measurable ht, measureReal_restrict_apply ht]
 
+theorem map_toSignedMeasure {μ : Measure α} [IsFiniteMeasure μ] {f : α → β} (hf : Measurable f) :
+    μ.toSignedMeasure.map f = (μ.map f).toSignedMeasure := by
+  ext s hs
+  rw [map_apply _ hf hs, Measure.toSignedMeasure_apply_measurable (hf hs),
+    Measure.toSignedMeasure_apply_measurable hs, map_measureReal_apply hf hs]
+
 section ContinuousAdd
 
 variable [ContinuousAdd M]
