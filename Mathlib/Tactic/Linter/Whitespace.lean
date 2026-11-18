@@ -143,7 +143,10 @@ flagging some line-breaking changes.
 (The pretty-printer does not always produce desirably formatted code.)
 -/
 partial
-def parallelScanAux (as : Array FormatError) (L M : String.Slice) : Array FormatError := Id.run do
+def parallelScanAux (minRemaining : Nat) (as : Array FormatError) (L M : String.Slice) :
+    Array FormatError := Id.run do
+  -- Stop once fewer than `minRemaining` bytes of `L` are left.
+  if L.utf8ByteSize < minRemaining then as else
   if M.trimAscii.isEmpty then as else
   -- We try as hard as possible to scan the strings one character at a time.
   -- However, single line comments introduced with `--` pretty-print differently than `/--`.
@@ -156,7 +159,7 @@ def parallelScanAux (as : Array FormatError) (L M : String.Slice) : Array Format
   -- original syntax, and for the same amount of characters in the pretty-printed one, since the
   -- pretty-printer *erases* the line break at the end of a single line comment.
   if let (some newL, some newM) := (L.dropPrefix? "/--", M.dropPrefix? "/--") then
-    parallelScanAux as newL newM
+    parallelScanAux minRemaining as newL newM
   else if L.startsWith "--" then
     let (pos, diff) := Id.run do
       let mut diff := 0
@@ -172,11 +175,11 @@ def parallelScanAux (as : Array FormatError) (L M : String.Slice) : Array Format
     -- This holds because we call this function with `M` being a pretty-printed version of `L`.
     -- If the pretty-printer changes in the future, this code may need to be adjusted.
     let newM := M.dropWhile (· != '-') |>.drop diff
-    parallelScanAux as newL.trimAsciiStart newM.trimAsciiStart
+    parallelScanAux minRemaining as newL.trimAsciiStart newM.trimAsciiStart
   else if let some newL := L.dropPrefix? "-/" then
     let newL := newL.trimAsciiStart
     let newM := M.drop 2 |>.trimAsciiStart
-    parallelScanAux as newL newM
+    parallelScanAux minRemaining as newL newM
   else
     let ls := L.drop 1
     let ms := M.drop 1
@@ -184,29 +187,31 @@ def parallelScanAux (as : Array FormatError) (L M : String.Slice) : Array Format
     match L.front with
     | ' ' =>
       if m.isWhitespace then
-        parallelScanAux as ls ms.trimAsciiStart
+        parallelScanAux minRemaining as ls ms.trimAsciiStart
       else
-        parallelScanAux (pushFormatError as (mkFormatError L.copy M.copy "extra space")) ls M
+        parallelScanAux minRemaining
+          (pushFormatError as (mkFormatError L.copy M.copy "extra space")) ls M
     | '\n' =>
       if m.isWhitespace then
-        parallelScanAux as ls.trimAsciiStart ms.trimAsciiStart
+        parallelScanAux minRemaining as ls.trimAsciiStart ms.trimAsciiStart
       else
-        parallelScanAux
+        parallelScanAux minRemaining
           (pushFormatError as (mkFormatError L.copy M.copy "remove line break")) ls.trimAsciiStart M
     | l => -- `l` is not whitespace
       if l == m then
-        parallelScanAux as ls ms
+        parallelScanAux minRemaining as ls ms
       else if m.isWhitespace then
-        parallelScanAux
+        parallelScanAux minRemaining
           (pushFormatError as (mkFormatError L.copy M.copy "missing space")) L ms.trimAsciiStart
       else
         -- If this code is reached, then `L` and `M` differ by something other than whitespace.
         -- This should not happen in practice.
         pushFormatError as (mkFormatError ls.copy ms.copy "Oh no! (Unreachable?)")
 
-@[inherit_doc parallelScanAux]
-def parallelScan (src fmt : String) : Array FormatError :=
-  parallelScanAux ∅ src fmt
+/-- `parallelScan src fmt minRemaining` runs `parallelScanAux` on `src` and `fmt`, stopping once
+fewer than `minRemaining` bytes of `src` are left to scan. -/
+def parallelScan (src fmt : String) (minRemaining : Nat := 0) : Array FormatError :=
+  parallelScanAux minRemaining ∅ src fmt
 
 namespace Style.Whitespace
 
@@ -265,11 +270,18 @@ input syntax whose kind is in `a`.
 
 The linter uses this information to avoid emitting a warning for nodes with kind contained in
 `unlintedNodes`.
+
+If `upTo` is given, nodes starting after `upTo` are skipped: they contain no range that ends
+by `upTo`.
 -/
-def getUnlintedRanges (a : Array SyntaxNodeKind) :
+def getUnlintedRanges (a : Array SyntaxNodeKind) (upTo : Option String.Pos.Raw := none) :
     Std.HashSet Lean.Syntax.Range → Syntax → Std.HashSet Lean.Syntax.Range
   | curr, s@(.node _ kind args) =>
-    let new := args.foldl (init := curr) (·.union <| getUnlintedRanges a curr ·)
+    let startsAfter : Bool := match upTo, s.getPos? with
+      | some u, some p => u < p
+      | _, _ => false
+    if startsAfter then curr else
+    let new := args.foldl (init := curr) (getUnlintedRanges a upTo)
     if a.contains kind then
       new.insert (s.getRange?.getD default)
     else
@@ -341,11 +353,12 @@ def whitespaceLinter : Linter where run := withSetOptionIn fun stx ↦ do
     let origSubstring := stx.getSubstring?.getD default
     let orig := origSubstring.toString
 
-    let scan := parallelScan orig st
+    -- Mismatches past `upTo` are never reported, so the scan stops there.
+    let scan := parallelScan orig st (origSubstring.stopPos.byteIdx - upTo.byteIdx)
 
     let docStringEnd := stx.find? (·.isOfKind ``Parser.Command.docComment) |>.getD default
     let docStringEnd := docStringEnd.getTailPos? |>.getD default
-    let forbidden := getUnlintedRanges unlintedNodes ∅ stx
+    let forbidden := getUnlintedRanges unlintedNodes upTo ∅ stx
     for s in scan do
       let center := origSubstring.stopPos.unoffsetBy s.srcEndPos
       let rg : Lean.Syntax.Range :=

@@ -507,6 +507,178 @@ Note: This linter can be disabled with `set_option linter.style.whitespace false
 /-- Check that doc/strings do not get removed as comments. -/
 example  : True := trivial
 
+-- Only the hypotheses segment of a declaration is linted: formatting inside the type, the value
+-- or the proof is never reported, even when it differs from the pretty-printed version.
+section headerOnly
+
+-- A misformatted proof body on its own is not reported.
+#guard_msgs in
+example (n : Nat) : n = n := by
+  have  h :n = n :=  rfl
+  exact  h
+
+-- Misformatting in the hypotheses is reported, and misformatting later in the proof is not.
+/--
+warning: missing space in the source
+
+This part of the code
+  '(n: Nat)'
+should be written as
+  '(n : Nat)'
+
+
+Note: This linter can be disabled with `set_option linter.style.whitespace false`
+-/
+#guard_msgs in
+example (n: Nat) : n + 0 = n := by
+  have h  :  n + 0 = n   := by   simp
+  exact   h
+
+-- A missing space just before the colon is reported; just after it, it is not.
+/--
+warning: missing space in the source
+
+This part of the code
+  'Nat): True'
+should be written as
+  'Nat) : True'
+
+
+Note: This linter can be disabled with `set_option linter.style.whitespace false`
+-/
+#guard_msgs in
+example (_n : Nat): True := trivial
+
+#guard_msgs in
+example (_n : Nat) :True := trivial
+
+-- Multi-byte characters before the reported position.
+/--
+warning: missing space in the source
+
+This part of the code
+  'γ)(_x :'
+should be written as
+  'γ) (_x'
+
+
+Note: This linter can be disabled with `set_option linter.style.whitespace false`
+-/
+#guard_msgs in
+example {γ : Type} (_f : γ → γ)(_x : γ) : True := trivial
+
+#guard_msgs in
+example {γ : Type} (_f : ∀ _ : γ, γ) (_x : γ) :∀ _ : γ, True := fun _ ↦ trivial
+
+-- Without a type, linting stops where the value starts.
+/--
+warning: missing space in the source
+
+This part of the code
+  '(n:Nat)'
+should be written as
+  '(n : Nat)'
+
+
+Note: This linter can be disabled with `set_option linter.style.whitespace false`
+-/
+#guard_msgs in
+def wsNoType (n:Nat) :=  n +  1
+
+#guard_msgs in
+def wsNoType' (n : Nat) :=  n +  1
+
+-- An unlinted node in the hypotheses is still skipped, and what follows it is still linted.
+/--
+warning: missing space in the source
+
+This part of the code
+  '0})(_n :'
+should be written as
+  '}) (_n'
+
+
+Note: This linter can be disabled with `set_option linter.style.whitespace false`
+-/
+#guard_msgs in
+example (_s : {x : Nat // x = 0})(_n : Nat) : True := trivial
+
+-- A header that spans several lines, followed by a misformatted proof.
+#guard_msgs in
+example (a : Nat)
+    (b : Nat) : a + b = b + a := by
+  rw  [Nat.add_comm]
+
+-- Comments inside the proof.
+/--
+warning: extra space in the source
+
+This part of the code
+  '(a  : Nat)'
+should be written as
+  '(a : Nat)'
+
+
+Note: This linter can be disabled with `set_option linter.style.whitespace false`
+-/
+#guard_msgs in
+example (a  : Nat) : a = a := by
+  -- a  comment   with  spaces
+  /- a block   comment -/
+  rfl
+
+-- The constructors of an inductive type are not linted.
+/--
+warning: missing space in the source
+
+This part of the code
+  '(n: Nat)'
+should be written as
+  '(n : Nat)'
+
+
+Note: This linter can be disabled with `set_option linter.style.whitespace false`
+-/
+#guard_msgs in
+inductive WsInd (n: Nat) where
+  | mk  : WsInd n
+  | other   (m :Nat) : WsInd n
+
+-- Nor are the fields of an instance.
+/--
+warning: extra space in the source
+
+This part of the code
+  'instance  wsInst'
+should be written as
+  'instance wsInst'
+
+
+Note: This linter can be disabled with `set_option linter.style.whitespace false`
+-/
+#guard_msgs in
+instance  wsInst : Inhabited Nat where
+  default  :=  0
+
+-- A doc-string, then a misformatted header and proof.
+/--
+warning: extra space in the source
+
+This part of the code
+  'wsDoc  (n :'
+should be written as
+  'wsDoc (n :'
+
+
+Note: This linter can be disabled with `set_option linter.style.whitespace false`
+-/
+#guard_msgs in
+/-- A doc-string   with  spaces. -/
+theorem wsDoc  (n : Nat) : n = n := by
+  exact   rfl
+
+end headerOnly
+
 -- Unit tests for internal functions in the linter.
 section internal
 
