@@ -315,6 +315,18 @@ lemma ωScottContinuous.comp (hg : ωScottContinuous g) (hf : ωScottContinuous 
 lemma ωScottContinuous.const {x : β} : ωScottContinuous (Function.const α x) :=
   ScottContinuousOn.const x
 
+@[fun_prop]
+lemma ωScottContinuous.ite {p : Prop} [Decidable p] {f₁ f₂ : α → β} (h₁ : ωScottContinuous f₁)
+    (h₂ : ωScottContinuous f₂) : ωScottContinuous fun x ↦ if p then f₁ x else f₂ x := by
+  split_ifs <;> assumption
+
+@[fun_prop]
+lemma ωScottContinuous.dite {p : Prop} [Decidable p] {f₁ : p → α → β} {f₂ : ¬p → α → β}
+    (h₁ : ∀ h, ωScottContinuous (f₁ h)) (h₂ : ∀ h, ωScottContinuous (f₂ h)) :
+    ωScottContinuous fun x ↦ if h : p then f₁ h x else f₂ h x := by
+  split_ifs with h
+  exacts [h₁ h, h₂ h]
+
 end Continuity
 
 end OmegaCompletePartialOrder
